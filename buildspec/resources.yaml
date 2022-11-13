@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: "AWS::Serverless-2016-10-31"
+Description: LambdaPipeline
+
+Resources:
+  OpenSearchServiceDomain:
+    Type: AWS::OpenSearchService::Domain
+    Properties:
+      DomainName: photosearch
+      EngineVersion: Elasticsearch_7.10
+      ClusterConfig: 
+        InstanceCount: 1
+        InstanceType: t3.small.search
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 10
+        VolumeType: gp2
+  photobucket5454:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: photobucket5454
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+  photobucket549:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: photobucket549
+  indexphotos:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: indexphotos
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.7
+      CodeUri: ./indexphotos
+      Description: ''
+      MemorySize: 128
+      Timeout: 10
+      Role: arn:aws:iam::**************:role/service-role/LF1-role-3z1vt9re
+      Events:
+        BucketEvent1:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: photobucket549
+            Events:
+              - s3:ObjectCreated:Put
+  searchphotos:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: searchphotos
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.9
+      CodeUri: ./searchphotos
+      Description: ''
+      MemorySize: 128
+      Timeout: 300
+      Role: arn:aws:iam::***********:role/service-role/LF2-role-jdouvpgc
+      Layers: 
+        - arn:aws:lambda:us-east-1:************:layer:inflect:3
+      Events:
+        PhotoApi:
+          Type: Api
+          Properties:
+            Path: /search
+            Method: GET
+  PhotoApi:
+    Type: AWS::ApiGateway::RestApi
+    DependsOn: [photobucket549]
+    Properties:
+      BodyS3Location:
+        Bucket: codepipelines3
+        Key: "swagger.yaml"
+      Description: "Rest api having search photos and upload photos methods."
+      Name: PhotoApi
+      BinaryMediaTypes: 
+        - "*/*"
+      FailOnWarnings: true
+      EndpointConfiguration:
+        Types:
+          - "REGIONAL"
+  PermissionForAPITosearchphotos:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt searchphotos.Arn
+      Principal: apigateway.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: !Join
+        - ""
+        - - "arn:aws:iam::*********:role/ApiGW-to-LF2"
+          - !Ref PhotoApi
+          - "/resources/*/methods/GET"
+  PermissionForS3Toindexphotos:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref indexphotos
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref "AWS::AccountId"
+      SourceArn: "arn:aws:s3:::photobucket549"

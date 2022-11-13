@@ -1,0 +1,16 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo "Installing dependencies..."
+  build:
+    commands:
+      - echo "Build step"
+  post_build:
+    commands:
+      - echo "PostBuild step"
+artifacts:
+  files:
+    - '**/*'
+  base-directory: 'LF1'
+      
