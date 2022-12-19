@@ -51,7 +51,7 @@ def lambda_handler(event, context):
     s3Object = record['s3']
     bucket = s3Object['bucket']['name']
     file_name = s3Object['object']['key']
-     = s3Object['object']['key']
+    key = s3Object['object']['key']
     response = s3.head_object(Bucket=bucket, Key=key)
     print("head_object : " , response)
     if response["Metadata"]:
